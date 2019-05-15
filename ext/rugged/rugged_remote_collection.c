@@ -61,7 +61,7 @@ static VALUE rb_git_remote_collection_create_anonymous(VALUE self, VALUE rb_url)
 
 /*
  *  call-seq:
- *     remotes.create(name, url) -> remote
+ *     remotes.create(name, url, refspec = nil) -> remote
  *
  *  Add a new remote with +name+ and +url+ to +repository+
  *  - +url+: a valid remote url
@@ -71,25 +71,40 @@ static VALUE rb_git_remote_collection_create_anonymous(VALUE self, VALUE rb_url)
  *
  *    @repo.remotes.create('origin', 'git://github.com/libgit2/rugged.git') #=> #<Rugged::Remote:0x00000001fbfa80>
  */
-static VALUE rb_git_remote_collection_create(VALUE self, VALUE rb_name, VALUE rb_url)
+static VALUE rb_git_remote_collection_create(int argc, VALUE *argv, VALUE self)
 {
 	git_remote *remote;
 	git_repository *repo;
+	char *refspec = NULL;
 	int error;
 
 	VALUE rb_repo = rugged_owner(self);
+
+    VALUE rb_name, rb_url, rb_refspec;
+
+    rb_scan_args(argc, argv, "21", &rb_name, &rb_url, &rb_refspec);
 
 	rugged_check_repo(rb_repo);
 	Data_Get_Struct(rb_repo, git_repository, repo);
 
 	Check_Type(rb_name, T_STRING);
 	Check_Type(rb_url, T_STRING);
+	if (!NIL_P(rb_refspec)) {
+	    Check_Type(rb_refspec, T_STRING);
 
-	error = git_remote_create(
-			&remote,
-			repo,
-			StringValueCStr(rb_name),
-			StringValueCStr(rb_url));
+        error = git_remote_create_with_fetchspec(
+                &remote,
+                repo,
+                StringValueCStr(rb_name),
+                StringValueCStr(rb_url),
+                StringValueCStr(rb_refspec));
+	} else {
+	    error = git_remote_create(&remote,
+                repo,
+                StringValueCStr(rb_name),
+                StringValueCStr(rb_url));
+	}
+
 
 	rugged_exception_check(error);
 
@@ -418,7 +433,7 @@ void Init_rugged_remote_collection(void)
 
 	rb_define_method(rb_cRuggedRemoteCollection, "[]",                rb_git_remote_collection_aref, 1);
 
-	rb_define_method(rb_cRuggedRemoteCollection, "create",            rb_git_remote_collection_create, 2);
+	rb_define_method(rb_cRuggedRemoteCollection, "create",            rb_git_remote_collection_create, -1);
 	rb_define_method(rb_cRuggedRemoteCollection, "create_anonymous",  rb_git_remote_collection_create_anonymous, 1);
 
 	rb_define_method(rb_cRuggedRemoteCollection, "each",              rb_git_remote_collection_each, 0);

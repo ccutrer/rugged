@@ -222,6 +222,14 @@ class RemoteWriteTest < Rugged::TestCase
     assert_equal 'git://github.com/libgit2/libgit2.git', remote.url
   end
 
+  def test_remote_add_with_refspec
+    @repo.remotes.create('upstream', 'git://github.com/libgit2/libgit2.git', '+refs/heads/*:refs/heads/*')
+    remote = @repo.remotes['upstream']
+    assert_equal 'upstream', remote.name
+    assert_equal 'git://github.com/libgit2/libgit2.git', remote.url
+    assert_equal ['+refs/heads/*:refs/heads/*'], remote.fetch_refspecs
+  end
+
   def test_remote_add_with_invalid_url
     @repo.remotes.create('upstream', 'libgit2')
   end
